@@ -269,9 +269,11 @@
                 <div><label class="text-sm">Primer (per gallon)</label><input type="number" step="0.01" id="setting-primerCost" class="w-full mt-1 rounded-md border-slate-300"></div>
                 
                 <div class="md:col-span-2"><h3 class="font-bold text-lg text-slate-700 border-b pb-2 mt-4 mb-3">Coverage & Production Rates</h3></div>
-                <div><label class="text-sm">Paint Coverage (sq ft / gal)</label><input type="number" id="setting-paintCoverage" class="w-full mt-1 rounded-md border-slate-300"></div>
-                <div><label class="text-sm">Paint Coverage (sq ft / quart)</label><input type="number" id="setting-quartCoverage" class="w-full mt-1 rounded-md border-slate-300"></div>
+                <div><label class="text-sm">Wall Paint Coverage (sq ft / gal)</label><input type="number" id="setting-paintCoverage" class="w-full mt-1 rounded-md border-slate-300"></div>
+                <div><label class="text-sm">Paint (per quart)</label><input type="number" id="setting-quartCoverage" class="w-full mt-1 rounded-md border-slate-300"></div>
                 <div><label class="text-sm">Primer Coverage (sq ft / gal)</label><input type="number" id="setting-primerCoverage" class="w-full mt-1 rounded-md border-slate-300"></div>
+                <div><label class="text-sm">Ceiling Coverage (sq ft / gal)</label><input type="number" id="setting-ceilingCoverage" class="w-full mt-1 rounded-md border-slate-300"></div>
+                <div><label class="text-sm">Trim Coverage (sq ft / gal)</label><input type="number" id="setting-trimCoverage" class="w-full mt-1 rounded-md border-slate-300"></div>
                 <div><label class="text-sm">Production Rate (sq ft / hr)</label><input type="number" id="setting-productionRate" class="w-full mt-1 rounded-md border-slate-300"></div>
 
                 <div class="md:col-span-2"><h3 class="font-bold text-lg text-slate-700 border-b pb-2 mt-4 mb-3">Labor & Prep Costs (CAD)</h3></div>
@@ -403,6 +405,8 @@
                     paintCoverage: 400,
                     quartCoverage: 100,
                     primerCoverage: 250,
+                    ceilingCoverage: 400,
+                    trimCoverage: 400,
                     laborRateHour: 30, 
                     doorPaintCharge: 200,
                     windowPaintCharge: 100,
@@ -793,8 +797,8 @@
                     const commonTrimArea = commonTrimLinearFeet * this.settings.defaultTrimWidth;
                     
                     const wallPaint = this.calculatePaintUnits(commonWallArea, 1, this.settings.paintCost, this.settings.quartCost, this.settings.paintCoverage, this.settings.quartCoverage); // Coats already factored in
-                    const ceilingPaint = this.calculatePaintUnits(commonCeilingArea, this.settings.defaultCeilingCoats, this.settings.paintCost, this.settings.quartCost, this.settings.paintCoverage, this.settings.quartCoverage);
-                    const trimPaint = this.calculatePaintUnits(commonTrimArea, this.settings.defaultTrimCoats, this.settings.paintCost, this.settings.quartCost, this.settings.paintCoverage, this.settings.quartCoverage);
+                    const ceilingPaint = this.calculatePaintUnits(commonCeilingArea, this.settings.defaultCeilingCoats, this.settings.paintCost, this.settings.quartCost, this.settings.ceilingCoverage, this.settings.ceilingCoverage / 4);
+                    const trimPaint = this.calculatePaintUnits(commonTrimArea, this.settings.defaultTrimCoats, this.settings.paintCost, this.settings.quartCost, this.settings.trimCoverage, this.settings.trimCoverage / 4);
                     const doorPaint = this.calculatePaintUnits(commonDoorAreaToPaint, this.settings.defaultDoorCoats, this.settings.paintCost, this.settings.quartCost, this.settings.paintCoverage, this.settings.quartCoverage);
                     
                     const totalUniquePaintCost = uniqueRoomsPaint.reduce((sum, room) => sum + room.cost, 0);
@@ -1039,14 +1043,21 @@
                 },
 
                 generateDetailedPrintView(data) {
-                    let roomsHtml = this.project.rooms.map(room => `
-                        <tr>
-                            <td class="py-2 pr-4 border-b">${room.name}</td>
-                            <td class="py-2 px-4 border-b text-center">${room.length} x ${room.width} x ${room.height}</td>
-                            <td class="py-2 px-4 border-b text-right">${(2 * (room.length + room.width) * room.height).toFixed(0)} sq ft</td>
-                            <td class="py-2 pl-4 border-b text-right">${(room.estimatedHours || 0).toFixed(1)} hrs</td>
-                        </tr>
-                    `).join('');
+                    let roomsHtml = this.project.rooms.map(room => {
+                        const wallArea = (2 * (room.length + room.width) * room.height).toFixed(0);
+                        const ceilingArea = room.includeCeiling ? (room.length * room.width).toFixed(0) : 'N/A';
+                        const trimArea = room.includeTrim ? (2 * (room.length + room.width) * this.settings.defaultTrimWidth).toFixed(0) : 'N/A';
+                        return `
+                            <tr>
+                                <td class="py-2 pr-2 border-b">${room.name}</td>
+                                <td class="py-2 px-2 border-b text-center">${room.length}x${room.width}x${room.height}</td>
+                                <td class="py-2 px-2 border-b text-right">${wallArea} sq ft</td>
+                                <td class="py-2 px-2 border-b text-right">${ceilingArea !== 'N/A' ? ceilingArea + ' sq ft' : 'N/A'}</td>
+                                <td class="py-2 px-2 border-b text-right">${trimArea !== 'N/A' ? trimArea + ' sq ft' : 'N/A'}</td>
+                                <td class="py-2 pl-2 border-b text-right">${(room.estimatedHours || 0).toFixed(1)} hrs</td>
+                            </tr>
+                        `;
+                    }).join('');
 
                     const formatUnits = (paint) => {
                         let str = '';
@@ -1060,7 +1071,7 @@
                     `).join('');
 
                     return `
-                        <div class="p-8 font-sans">
+                        <div class="p-8 font-sans text-xs">
                             <h1 class="text-2xl font-bold mb-1">Internal Detailed Estimate</h1>
                             <p class="text-slate-600 mb-6">${this.settings.companyName}</p>
                             
@@ -1073,10 +1084,12 @@
                             <table class="w-full text-left">
                                 <thead>
                                     <tr>
-                                        <th class="py-1 pr-4">Room</th>
-                                        <th class="py-1 px-4 text-center">Dimensions (L x W x H)</th>
-                                        <th class="py-1 px-4 text-right">Gross Wall Area</th>
-                                        <th class="py-1 pl-4 text-right">Est. Hours</th>
+                                        <th class="py-1 pr-2">Room</th>
+                                        <th class="py-1 px-2 text-center">Dims</th>
+                                        <th class="py-1 px-2 text-right">Wall Area</th>
+                                        <th class="py-1 px-2 text-right">Ceiling Area</th>
+                                        <th class="py-1 px-2 text-right">Trim Area</th>
+                                        <th class="py-1 pl-2 text-right">Est. Hours</th>
                                     </tr>
                                 </thead>
                                 <tbody>${roomsHtml}</tbody>

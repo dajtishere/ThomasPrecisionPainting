@@ -77,6 +77,9 @@
                     </div>
 
                     <div id="step-1" class="tab-content active">
+                        <div class="flex justify-center mb-6">
+                            <img id="main-logo-display" src="" alt="Company Logo" class="h-20 object-contain">
+                        </div>
                         <h2 class="text-2xl font-bold mb-2">Project & Client Information</h2>
                         <p class="text-slate-500 mb-6">Start by entering the basic details for this project. You can also load a previously saved estimate.</p>
                         <div class="space-y-4">
@@ -369,6 +372,7 @@
                     closePrintPreviewBtn: document.getElementById('closePrintPreviewBtn'),
                     notification: document.getElementById('notification'),
                     saveFileBtn: document.getElementById('saveFileBtn'),
+                    mainLogoDisplay: document.getElementById('main-logo-display'),
                 },
 
                 init() {
@@ -441,6 +445,7 @@
                         }
                     }
                     this.elements.logoPreview.src = this.settings.companyLogo;
+                    this.elements.mainLogoDisplay.src = this.settings.companyLogo;
                 },
 
                 updateSetting(key, value) {
@@ -460,6 +465,7 @@
                     reader.onloadend = () => {
                         this.settings.companyLogo = reader.result;
                         this.elements.logoPreview.src = reader.result;
+                        this.elements.mainLogoDisplay.src = reader.result;
                         this.saveSettings();
                     };
                     reader.readAsDataURL(file);

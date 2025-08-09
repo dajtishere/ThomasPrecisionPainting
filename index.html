@@ -54,8 +54,10 @@
             <h1 class="text-xl md:text-2xl font-bold text-slate-700">Thomas Precision Painting</h1>
             <div class="flex-shrink-0">
                 <button id="newEstimateBtn" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-3 sm:px-4 rounded-lg text-xs sm:text-sm mr-1 sm:mr-2">New</button>
+                <button id="loadFileBtn" class="bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-2 px-3 sm:px-4 rounded-lg text-xs sm:text-sm mr-1 sm:mr-2">Load File</button>
                 <button id="loadEstimateBtn" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-3 sm:px-4 rounded-lg text-xs sm:text-sm mr-1 sm:mr-2">Load</button>
                 <button id="settingsBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-3 sm:px-4 rounded-lg text-xs sm:text-sm">Settings</button>
+                <input type="file" id="fileInput" class="hidden" accept=".json">
             </div>
         </header>
 
@@ -167,6 +169,7 @@
                          <div class="mt-8 flex flex-wrap justify-center gap-4">
                             <button id="printClientBtn" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-6 rounded-lg">Preview Client View</button>
                             <button id="printDetailedBtn" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-2 px-6 rounded-lg">Preview Detailed View</button>
+                            <button id="saveFileBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg">Save File</button>
                         </div>
                     </div>
 
@@ -220,7 +223,12 @@
         </main>
     </div>
 
-    <div id="settingsModal" class="modal fixed inset-0 bg-black bg-opacity-50 justify-center items-center p-4">
+    <!-- Notification Element -->
+    <div id="notification" class="fixed bottom-5 right-5 bg-green-500 text-white py-3 px-6 rounded-lg shadow-lg opacity-0 -translate-y-10 transition-all duration-500 ease-in-out z-50">
+        Notification Message
+    </div>
+
+    <div id="settingsModal" class="modal fixed inset-0 bg-black bg-opacity-50 justify-center items-center p-4 z-20">
         <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <h2 class="text-2xl font-bold mb-6">Application Settings</h2>
             <p class="text-slate-500 mb-6">Adjust the default costs, rates, and margins used in calculations. Changes are saved automatically.</p>
@@ -289,7 +297,7 @@
         </div>
     </div>
 
-    <div id="loadModal" class="modal fixed inset-0 bg-black bg-opacity-50 justify-center items-center p-4">
+    <div id="loadModal" class="modal fixed inset-0 bg-black bg-opacity-50 justify-center items-center p-4 z-20">
         <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-lg">
             <h2 class="text-2xl font-bold mb-6">Load Saved Estimate</h2>
             <div id="saved-estimates-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
@@ -299,7 +307,7 @@
         </div>
     </div>
 
-    <div id="printPreviewModal" class="modal fixed inset-0 bg-black bg-opacity-50 justify-center items-center p-4">
+    <div id="printPreviewModal" class="modal fixed inset-0 bg-black bg-opacity-50 justify-center items-center p-4 z-30">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh]">
             <div class="p-6 border-b flex justify-between items-center no-print">
                 <h2 id="print-preview-title" class="text-2xl font-bold">Estimate Preview</h2>
@@ -335,6 +343,8 @@
                     settingsModal: document.getElementById('settingsModal'),
                     closeSettingsBtn: document.getElementById('closeSettingsBtn'),
                     newEstimateBtn: document.getElementById('newEstimateBtn'),
+                    loadFileBtn: document.getElementById('loadFileBtn'),
+                    fileInput: document.getElementById('fileInput'),
                     loadEstimateBtn: document.getElementById('loadEstimateBtn'),
                     loadModal: document.getElementById('loadModal'),
                     closeLoadBtn: document.getElementById('closeLoadBtn'),
@@ -350,6 +360,8 @@
                     printPreviewContent: document.getElementById('print-preview-content'),
                     confirmPrintBtn: document.getElementById('confirmPrintBtn'),
                     closePrintPreviewBtn: document.getElementById('closePrintPreviewBtn'),
+                    notification: document.getElementById('notification'),
+                    saveFileBtn: document.getElementById('saveFileBtn'),
                 },
 
                 init() {
@@ -386,16 +398,23 @@
                     paintCoverage: 400,
                     quartCoverage: 100,
                     primerCoverage: 250,
-                    laborRateHour: 30, doorPaintCharge: 60,
+                    laborRateHour: 30, 
+                    doorPaintCharge: 60,
                     productionRate: 120,
-                    costNailPops: 35, costSmallHole: 40, costLargeHole: 80, costWallpaper: 1.50,
-                    complexityHighCeilings: 25, complexityFurniture: 100,
-                    overhead: 15, profit: 20, tax: 13,
+                    costNailPops: 35, 
+                    costSmallHole: 40, 
+                    costLargeHole: 80, 
+                    costWallpaper: 1.50,
+                    complexityHighCeilings: 25, 
+                    complexityFurniture: 100,
+                    overhead: 15, 
+                    profit: 20, 
+                    tax: 13,
                 },
 
                 loadSettings() {
                     const savedSettings = localStorage.getItem('paintingCalculatorSettings');
-                    this.settings = savedSettings ? JSON.parse(savedSettings) : { ...this.defaultSettings };
+                    this.settings = savedSettings ? { ...this.defaultSettings, ...JSON.parse(savedSettings) } : { ...this.defaultSettings };
                 },
 
                 saveSettings() {
@@ -469,6 +488,9 @@
                     this.elements.logoUpload.addEventListener('change', (e) => this.handleLogoUpload(e));
                     this.elements.confirmPrintBtn.addEventListener('click', () => window.print());
                     this.elements.closePrintPreviewBtn.addEventListener('click', () => this.toggleModal('printPreviewModal', false));
+                    this.elements.saveFileBtn.addEventListener('click', () => this.saveEstimateAsFile());
+                    this.elements.loadFileBtn.addEventListener('click', () => this.elements.fileInput.click());
+                    this.elements.fileInput.addEventListener('change', (e) => this.loadEstimateFromFile(e));
 
                     this.elements.wizardContainer.addEventListener('input', (e) => {
                         if (e.target.closest('#step-1, #step-2, #step-3')) {
@@ -502,6 +524,11 @@
                             const key = e.target.id.replace('setting-', '');
                             this.updateSetting(key, e.target.value);
                         }
+                    });
+                    
+                    this.elements.savedEstimatesList.addEventListener('click', (e) => {
+                        if (e.target.dataset.loadId) this.loadEstimate(e.target.dataset.loadId);
+                        if (e.target.dataset.deleteId) this.deleteEstimate(e.target.dataset.deleteId);
                     });
                 },
 
@@ -707,7 +734,7 @@
                         }
 
                         if (room.uniqueColour) {
-                            const uniqueWallPaint = this.calculatePaintUnits(currentWallArea, room.wallCoats);
+                            const uniqueWallPaint = this.calculatePaintUnits(currentWallArea, room.wallCoats, this.settings.paintCost, this.settings.quartCost, this.settings.paintCoverage, this.settings.quartCoverage);
                             uniqueRoomsPaint.push({ name: room.name, ...uniqueWallPaint });
                             
                             commonCeilingArea += currentCeilingArea;
@@ -728,16 +755,16 @@
 
                     const commonTrimArea = commonTrimLinearFeet * this.settings.defaultTrimWidth;
                     
-                    const wallPaint = this.calculatePaintUnits(commonWallArea, 1); // Coats already factored in
-                    const ceilingPaint = this.calculatePaintUnits(commonCeilingArea, this.settings.defaultCeilingCoats);
-                    const trimPaint = this.calculatePaintUnits(commonTrimArea, this.settings.defaultTrimCoats);
-                    const doorPaint = this.calculatePaintUnits(commonDoorAreaToPaint, this.settings.defaultDoorCoats);
+                    const wallPaint = this.calculatePaintUnits(commonWallArea, 1, this.settings.paintCost, this.settings.quartCost, this.settings.paintCoverage, this.settings.quartCoverage); // Coats already factored in
+                    const ceilingPaint = this.calculatePaintUnits(commonCeilingArea, this.settings.defaultCeilingCoats, this.settings.paintCost, this.settings.quartCost, this.settings.paintCoverage, this.settings.quartCoverage);
+                    const trimPaint = this.calculatePaintUnits(commonTrimArea, this.settings.defaultTrimCoats, this.settings.paintCost, this.settings.quartCost, this.settings.paintCoverage, this.settings.quartCoverage);
+                    const doorPaint = this.calculatePaintUnits(commonDoorAreaToPaint, this.settings.defaultDoorCoats, this.settings.paintCost, this.settings.quartCost, this.settings.paintCoverage, this.settings.quartCoverage);
                     
                     const totalUniquePaintCost = uniqueRoomsPaint.reduce((sum, room) => sum + room.cost, 0);
                     totalPaintCost = wallPaint.cost + ceilingPaint.cost + trimPaint.cost + doorPaint.cost + totalUniquePaintCost;
 
-                    const primerGallons = Math.ceil(totalPrimableArea / this.settings.primerCoverage);
-                    const materialCost = totalPaintCost + (primerGallons * this.settings.primerCost);
+                    const primerUnits = this.calculatePaintUnits(totalPrimableArea, this.settings.defaultPrimerCoats, this.settings.primerCost, this.settings.primerCost/2, this.settings.primerCoverage, this.settings.primerCoverage/4);
+                    const materialCost = totalPaintCost + primerUnits.cost;
                     
                     const prepCost = (this.project.prep.nailPops * this.settings.costNailPops) +
                                      (this.project.prep.smallHoles * this.settings.costSmallHole) +
@@ -771,33 +798,33 @@
                         overhead: withOverhead - subtotal,
                         profit: withProfit - withOverhead,
                         taxAmount, grandTotal,
-                        paintBreakdown: { wallPaint, ceilingPaint, trimPaint, doorPaint, uniqueRoomsPaint, primer: this.calculatePaintUnits(totalPrimableArea, this.settings.defaultPrimerCoats) }
+                        paintBreakdown: { wallPaint, ceilingPaint, trimPaint, doorPaint, uniqueRoomsPaint, primer: primerUnits }
                     };
                 },
 
-                calculatePaintUnits(area, coats) {
+                calculatePaintUnits(area, coats, gallonCost, quartCost, gallonCoverage, quartCoverage) {
                     if (area === 0 || coats === 0) {
                         return { gallons: 0, quarts: 0, cost: 0 };
                     }
 
                     const totalArea = area * coats;
-                    const rawGallons = totalArea / this.settings.paintCoverage;
+                    const rawGallons = totalArea / gallonCoverage;
 
                     let gallons = Math.floor(rawGallons);
-                    const remainingArea = totalArea - (gallons * this.settings.paintCoverage);
-                    let quarts = Math.ceil(remainingArea / this.settings.quartCoverage);
+                    const remainingArea = totalArea - (gallons * gallonCoverage);
+                    let quarts = Math.ceil(remainingArea / quartCoverage);
 
                     if (quarts > this.settings.roundUpQuartsThreshold) {
                         gallons += 1;
                         quarts = 0;
                     }
                     
-                    if (quarts > 0 && (quarts * this.settings.quartCost) >= this.settings.paintCost) {
+                    if (quarts > 0 && (quarts * quartCost) >= gallonCost) {
                          gallons += 1;
                          quarts = 0;
                     }
 
-                    const cost = (gallons * this.settings.paintCost) + (quarts * this.settings.quartCost);
+                    const cost = (gallons * gallonCost) + (quarts * quartCost);
                     return { gallons, quarts, cost };
                 },
 
@@ -911,9 +938,7 @@
                     const data = this.getCalculationData();
                     
                     const totalPaintableArea = data.totalWallArea + data.totalCeilingArea;
-                    let laborHours = totalPaintableArea / this.settings.productionRate * 2 + this.project.prep.sanding;
-                    if (this.project.complexity.highCeilings) laborHours *= (1 + this.settings.complexityHighCeilings / 100);
-                    if (this.project.complexity.furniture) laborHours += this.project.rooms.length * (this.settings.complexityFurniture / this.settings.laborRateHour);
+                    let laborHours = data.laborCost / this.settings.laborRateHour; // Use calculated labor cost to get final hours
 
                     if (totalPaintableArea > 0) {
                         this.project.rooms.forEach(room => {
@@ -1048,6 +1073,18 @@
                     if (show) modal.classList.add('active');
                     else modal.classList.remove('active');
                 },
+                
+                showNotification(message, isError = false) {
+                    const el = this.elements.notification;
+                    el.textContent = message;
+                    el.classList.remove('bg-green-500', 'bg-red-500', 'opacity-0', '-translate-y-10');
+                    el.classList.add(isError ? 'bg-red-500' : 'bg-green-500', 'opacity-100', 'translate-y-0');
+
+                    setTimeout(() => {
+                        el.classList.remove('opacity-100', 'translate-y-0');
+                        el.classList.add('opacity-0', '-translate-y-10');
+                    }, 3000);
+                },
 
                 saveEstimate() {
                     this.collectData();
@@ -1060,7 +1097,54 @@
                     };
                     estimates.push(estimateToSave);
                     localStorage.setItem('paintingEstimates', JSON.stringify(estimates));
-                    alert('Estimate saved successfully!');
+                    this.showNotification('Estimate saved successfully!');
+                },
+
+                saveEstimateAsFile() {
+                    this.collectData();
+                    const blob = new Blob([JSON.stringify(this.project, null, 2)], { type: 'application/json' });
+                    const filename = `${(this.project.projectName || 'estimate').replace(/ /g, '_')}.json`;
+
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(link.href);
+                    this.showNotification('Estimate saved to file!');
+                },
+
+                loadEstimateFromFile(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const loadedProject = JSON.parse(event.target.result);
+                            // Basic validation to ensure it's a project file
+                            if (loadedProject && typeof loadedProject.projectName !== 'undefined' && Array.isArray(loadedProject.rooms)) {
+                                this.project = loadedProject;
+                                this.rebuildUIFromProject();
+                                this.calculateEstimate();
+                                this.showNotification('Estimate loaded successfully!');
+                            } else {
+                                throw new Error('Invalid file format.');
+                            }
+                        } catch (error) {
+                            console.error("Failed to load or parse estimate file:", error);
+                            this.showNotification('Error: Could not load the file. It may be invalid.', true);
+                        } finally {
+                            // Reset file input to allow loading the same file again
+                            e.target.value = '';
+                        }
+                    };
+                    reader.onerror = () => {
+                        this.showNotification('Error reading file.', true);
+                        e.target.value = '';
+                    };
+                    reader.readAsText(file);
                 },
 
                 showLoadModal() {
@@ -1082,10 +1166,6 @@
                             this.elements.savedEstimatesList.appendChild(estEl);
                         });
                     }
-                    this.elements.savedEstimatesList.addEventListener('click', (e) => {
-                        if (e.target.dataset.loadId) this.loadEstimate(e.target.dataset.loadId);
-                        if (e.target.dataset.deleteId) this.deleteEstimate(e.target.dataset.deleteId);
-                    });
                     this.toggleModal('loadModal', true);
                 },
 
@@ -1110,52 +1190,75 @@
                 },
 
                 rebuildUIFromProject() {
-                    document.getElementById('projectName').value = this.project.projectName;
-                    document.getElementById('clientName').value = this.project.clientName;
+                    document.getElementById('projectName').value = this.project.projectName || '';
+                    document.getElementById('clientName').value = this.project.clientName || '';
                     document.getElementById('clientPhone').value = this.project.clientPhone || '';
                     document.getElementById('clientEmail').value = this.project.clientEmail || '';
                     
-                    document.getElementById('prep-nailPops').value = this.project.prep.nailPops;
-                    document.getElementById('prep-smallHoles').value = this.project.prep.smallHoles;
-                    document.getElementById('prep-largeHoles').value = this.project.prep.largeHoles;
-                    document.getElementById('prep-wallpaperRemoval').value = this.project.prep.wallpaperRemoval;
-                    document.getElementById('prep-sanding').value = this.project.prep.sanding;
-                    
-                    document.getElementById('complexity-highCeilings').checked = this.project.complexity.highCeilings;
-                    document.getElementById('complexity-furniture').checked = this.project.complexity.furniture;
+                    if (this.project.prep) {
+                        document.getElementById('prep-nailPops').value = this.project.prep.nailPops || 0;
+                        document.getElementById('prep-smallHoles').value = this.project.prep.smallHoles || 0;
+                        document.getElementById('prep-largeHoles').value = this.project.prep.largeHoles || 0;
+                        document.getElementById('prep-wallpaperRemoval').value = this.project.prep.wallpaperRemoval || 0;
+                        document.getElementById('prep-sanding').value = this.project.prep.sanding || 0;
+                    }
+                    if (this.project.complexity) {
+                        document.getElementById('complexity-highCeilings').checked = this.project.complexity.highCeilings || false;
+                        document.getElementById('complexity-furniture').checked = this.project.complexity.furniture || false;
+                    }
 
                     this.elements.roomsContainer.innerHTML = '';
-                    const roomsToLoad = [...this.project.rooms];
-                    this.project.rooms = [];
-                    roomsToLoad.forEach(roomData => {
-                        this.addRoom();
-                        const newRoom = this.project.rooms[this.project.rooms.length - 1];
-                        Object.assign(newRoom, roomData);
+                    if (!this.project.rooms) this.project.rooms = [];
+
+                    this.project.rooms.forEach(room => {
+                        room.id = `room-${Date.now()}${Math.random().toString(36).substring(2)}`; 
+
+                        const roomTemplate = `
+                            <div id="${room.id}" class="room-item bg-slate-50 border border-slate-200 p-4 rounded-lg">
+                                <div class="flex justify-between items-center mb-4">
+                                    <input type="text" data-room-id="${room.id}" data-field="name" value="${room.name}" class="text-lg font-bold bg-transparent focus:bg-white rounded p-1">
+                                    <button data-remove-room="${room.id}" class="text-red-500 hover:text-red-700 font-semibold text-sm">Remove</button>
+                                </div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                    <div><label class="text-xs">Length (ft)</label><input type="number" data-room-id="${room.id}" data-field="length" value="${room.length}" class="w-full mt-1 rounded-md border-slate-300 text-sm"></div>
+                                    <div><label class="text-xs">Width (ft)</label><input type="number" data-room-id="${room.id}" data-field="width" value="${room.width}" class="w-full mt-1 rounded-md border-slate-300 text-sm"></div>
+                                    <div><label class="text-xs">Height (ft)</label><input type="number" data-room-id="${room.id}" data-field="height" value="${room.height}" class="w-full mt-1 rounded-md border-slate-300 text-sm"></div>
+                                    <div><label class="text-xs">Wall Coats</label><input type="number" data-room-id="${room.id}" data-field="wallCoats" value="${room.wallCoats}" class="w-full mt-1 rounded-md border-slate-300 text-sm"></div>
+                                    <div class="col-span-2 md:col-span-4 flex items-center space-x-6 pt-2">
+                                        <div class="flex items-center"><input type="checkbox" data-room-id="${room.id}" data-field="includePrimer" ${room.includePrimer ? 'checked' : ''} class="h-4 w-4 rounded"><label class="ml-2 text-sm">Primer</label></div>
+                                        <div class="flex items-center"><input type="checkbox" data-room-id="${room.id}" data-field="includeCeiling" ${room.includeCeiling ? 'checked' : ''} class="h-4 w-4 rounded"><label class="ml-2 text-sm">Ceiling</label></div>
+                                        <div class="flex items-center"><input type="checkbox" data-room-id="${room.id}" data-field="includeTrim" ${room.includeTrim ? 'checked' : ''} class="h-4 w-4 rounded"><label class="ml-2 text-sm">Trim</label></div>
+                                        <div class="flex items-center"><input type="checkbox" data-room-id="${room.id}" data-field="uniqueColour" ${room.uniqueColour ? 'checked' : ''} class="h-4 w-4 rounded"><label class="ml-2 text-sm font-semibold text-blue-600">Unique Paint Colour</label></div>
+                                    </div>
+                                </div>
+                                <div class="exclusions-container space-y-2" data-room-id="${room.id}"></div>
+                                <button data-add-exclusion="${room.id}" class="mt-2 text-blue-600 hover:text-blue-800 text-sm font-semibold">+ Add Door/Window</button>
+                            </div>
+                        `;
+                        this.elements.roomsContainer.insertAdjacentHTML('beforeend', roomTemplate);
                         
-                        const roomEl = document.getElementById(newRoom.id);
-                        roomEl.querySelector(`[data-field="name"]`).value = newRoom.name;
-                        roomEl.querySelector(`[data-field="length"]`).value = newRoom.length;
-                        roomEl.querySelector(`[data-field="width"]`).value = newRoom.width;
-                        roomEl.querySelector(`[data-field="height"]`).value = newRoom.height;
-                        roomEl.querySelector(`[data-field="wallCoats"]`).value = newRoom.wallCoats;
-                        roomEl.querySelector(`[data-field="includePrimer"]`).checked = newRoom.includePrimer;
-                        roomEl.querySelector(`[data-field="includeCeiling"]`).checked = newRoom.includeCeiling;
-                        roomEl.querySelector(`[data-field="includeTrim"]`).checked = newRoom.includeTrim;
-                        roomEl.querySelector(`[data-field="uniqueColour"]`).checked = newRoom.uniqueColour;
-                        
-                        const exclusionsToLoad = [...newRoom.exclusions];
-                        newRoom.exclusions = [];
-                        exclusionsToLoad.forEach(exData => {
-                            this.addExclusion(newRoom.id);
-                            const newEx = newRoom.exclusions[newRoom.exclusions.length - 1];
-                            Object.assign(newEx, exData);
-                            
-                            const exEl = document.getElementById(newEx.id);
-                            exEl.querySelector(`[data-field="type"]`).value = newEx.type;
-                            exEl.querySelector(`[data-field="width"]`).value = newEx.width;
-                            exEl.querySelector(`[data-field="height"]`).value = newEx.height;
-                            exEl.querySelector(`[data-field="paint"]`).checked = newEx.paint;
-                        });
+                        const exclusionsContainer = this.elements.roomsContainer.querySelector(`#${room.id} .exclusions-container`);
+                        if (room.exclusions) {
+                            room.exclusions.forEach(exclusion => {
+                                exclusion.id = `ex-${Date.now()}${Math.random().toString(36).substring(2)}`;
+                                const exclusionTemplate = `
+                                    <div id="${exclusion.id}" class="exclusion-item grid grid-cols-12 gap-2 items-center text-sm">
+                                        <select data-ex-id="${exclusion.id}" data-field="type" class="col-span-3 rounded-md border-slate-300">
+                                            <option value="door" ${exclusion.type === 'door' ? 'selected' : ''}>Door</option>
+                                            <option value="window" ${exclusion.type === 'window' ? 'selected' : ''}>Window</option>
+                                        </select>
+                                        <input type="number" data-ex-id="${exclusion.id}" data-field="width" value="${exclusion.width}" class="col-span-2 rounded-md border-slate-300" placeholder="W">
+                                        <span class="text-slate-400">x</span>
+                                        <input type="number" data-ex-id="${exclusion.id}" data-field="height" value="${exclusion.height}" class="col-span-2 rounded-md border-slate-300" placeholder="H">
+                                        <div class="col-span-3 flex items-center justify-center">
+                                            <input type="checkbox" data-ex-id="${exclusion.id}" data-field="paint" ${exclusion.paint ? 'checked' : ''} class="h-4 w-4 rounded"><label class="ml-1 text-xs">Paint?</label>
+                                        </div>
+                                        <button data-remove-ex="${exclusion.id}" class="col-span-1 text-red-400 hover:text-red-600">✖</button>
+                                    </div>
+                                `;
+                                exclusionsContainer.insertAdjacentHTML('beforeend', exclusionTemplate);
+                            });
+                        }
                     });
                 }
             };
@@ -1165,4 +1268,3 @@
     </script>
 </body>
 </html>
-
